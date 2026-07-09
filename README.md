@@ -1,5 +1,7 @@
 # Chromatic Haven
 
+![Chromatic Haven social preview](public/social-preview.svg)
+
 Chromatic Haven is an adult coloring game app designed for mobile and desktop web. The app is installable as a Progressive Web App and includes gameplay systems found in top color game experiences.
 
 ## Core Gameplay

@@ -1,0 +1,60 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f4e3cb"/>
+      <stop offset="52%" stop-color="#f5d7bc"/>
+      <stop offset="100%" stop-color="#f2c9af"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff9ed"/>
+      <stop offset="100%" stop-color="#fff3e0"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#4c3022" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <circle cx="118" cy="112" r="180" fill="#ffc68c" opacity="0.34"/>
+  <circle cx="1165" cy="88" r="172" fill="#ff826d" opacity="0.18"/>
+  <circle cx="980" cy="586" r="260" fill="#ffd48f" opacity="0.22"/>
+
+  <g filter="url(#soft)">
+    <rect x="58" y="66" width="1164" height="508" rx="36" fill="url(#card)" stroke="#4f3d2f" stroke-opacity="0.24" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(112 118)">
+    <text x="0" y="22" fill="#5f5044" font-size="20" font-family="Sora, Segoe UI, sans-serif" font-weight="700" letter-spacing="4">CHROMATIC HAVEN</text>
+    <text x="0" y="94" fill="#17120f" font-size="68" font-family="Georgia, Times New Roman, serif" font-weight="700">Adult Coloring Game</text>
+    <text x="0" y="146" fill="#4f433a" font-size="30" font-family="Sora, Segoe UI, sans-serif">Mobile and desktop app with premium gameplay loops</text>
+
+    <g transform="translate(0 194)">
+      <rect x="0" y="0" width="218" height="48" rx="14" fill="#fff" stroke="#2a2a72" stroke-width="2"/>
+      <text x="26" y="32" fill="#2a2a72" font-size="22" font-family="Sora, Segoe UI, sans-serif" font-weight="700">Daily Challenge</text>
+
+      <rect x="236" y="0" width="198" height="48" rx="14" fill="#fff" stroke="#2a2a72" stroke-width="2"/>
+      <text x="263" y="32" fill="#2a2a72" font-size="22" font-family="Sora, Segoe UI, sans-serif" font-weight="700">Achievements</text>
+
+      <rect x="452" y="0" width="154" height="48" rx="14" fill="#fff" stroke="#2a2a72" stroke-width="2"/>
+      <text x="480" y="32" fill="#2a2a72" font-size="22" font-family="Sora, Segoe UI, sans-serif" font-weight="700">PWA App</text>
+    </g>
+  </g>
+
+  <g transform="translate(860 130)" filter="url(#soft)">
+    <rect x="0" y="0" width="292" height="392" rx="26" fill="#fffdf7" stroke="#271f19" stroke-opacity="0.3"/>
+
+    <circle cx="146" cy="116" r="72" fill="#fff9ed" stroke="#1e1e1e" stroke-width="8"/>
+    <path d="M146 42L163 80H129L146 42Z" fill="#fb5607" stroke="#1e1e1e" stroke-width="5"/>
+    <path d="M196 81L187 122L160 102L196 81Z" fill="#ff006e" stroke="#1e1e1e" stroke-width="5"/>
+    <path d="M213 141L176 157L180 124L213 141Z" fill="#3a86ff" stroke="#1e1e1e" stroke-width="5"/>
+    <path d="M180 200L141 191L164 168L180 200Z" fill="#b5179e" stroke="#1e1e1e" stroke-width="5"/>
+    <path d="M129 200L146 163L163 200H129Z" fill="#ffbe0b" stroke="#1e1e1e" stroke-width="5"/>
+    <circle cx="146" cy="116" r="22" fill="#fff" stroke="#1e1e1e" stroke-width="4"/>
+
+    <rect x="28" y="242" width="236" height="106" rx="14" fill="#fff" stroke="#2a2a72" stroke-opacity="0.3"/>
+    <text x="44" y="274" fill="#2a2a72" font-size="20" font-family="Sora, Segoe UI, sans-serif" font-weight="700">Progress</text>
+    <rect x="44" y="292" width="200" height="10" rx="10" fill="#d9d7df"/>
+    <rect x="44" y="292" width="152" height="10" rx="10" fill="#2a2a72"/>
+    <text x="44" y="330" fill="#4a3f35" font-size="18" font-family="Sora, Segoe UI, sans-serif">Scene 76% complete</text>
+  </g>
+</svg>
