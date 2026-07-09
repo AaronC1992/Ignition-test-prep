@@ -4,12 +4,13 @@
 
 ## Quick Start
 
-- [Play Now](https://aaronc1992.github.io/chromatic-haven/)
+- [Play Now Instant](https://stackblitz.com/github/AaronC1992/chromatic-haven?startScript=dev)
+- [Play Now Live Site](https://aaronc1992.github.io/chromatic-haven/)
 - [Start App Locally](#local-development)
 - [Open In GitHub Codespaces](https://github.com/AaronC1992/chromatic-haven/codespaces)
 - [View Run Commands](#local-development)
 
-The Play Now link points to GitHub Pages and works after the deploy workflow completes.
+Play Now Instant launches directly from this GitHub repository in the browser.
 
 Chromatic Haven is an adult coloring game app designed for mobile and desktop web. The app is installable as a Progressive Web App and includes gameplay systems found in top color game experiences.
 
