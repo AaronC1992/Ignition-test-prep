@@ -85,123 +85,204 @@ const DEFAULT_META: GameMeta = {
   totalExports: 0,
 }
 
+const TAU = Math.PI * 2
+
+const format = (value: number) => Number(value.toFixed(2))
+
+const pointOnCircle = (cx: number, cy: number, radius: number, angle: number) => ({
+  x: format(cx + Math.cos(angle) * radius),
+  y: format(cy + Math.sin(angle) * radius),
+})
+
+const circlePath = (cx: number, cy: number, radius: number) => {
+  const x = format(cx + radius)
+  const y = format(cy)
+  const xOpp = format(cx - radius)
+
+  return `M ${x} ${y} A ${radius} ${radius} 0 1 0 ${xOpp} ${y} A ${radius} ${radius} 0 1 0 ${x} ${y} Z`
+}
+
+const ringSlicePath = (
+  cx: number,
+  cy: number,
+  innerRadius: number,
+  outerRadius: number,
+  startAngle: number,
+  endAngle: number,
+) => {
+  const outerStart = pointOnCircle(cx, cy, outerRadius, startAngle)
+  const outerEnd = pointOnCircle(cx, cy, outerRadius, endAngle)
+  const innerEnd = pointOnCircle(cx, cy, innerRadius, endAngle)
+  const innerStart = pointOnCircle(cx, cy, innerRadius, startAngle)
+
+  const angleSize = Math.abs(endAngle - startAngle)
+  const largeArcFlag = angleSize > Math.PI ? 1 : 0
+
+  return [
+    `M ${outerStart.x} ${outerStart.y}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${outerEnd.x} ${outerEnd.y}`,
+    `L ${innerEnd.x} ${innerEnd.y}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStart.x} ${innerStart.y}`,
+    'Z',
+  ].join(' ')
+}
+
+const petalPath = (
+  cx: number,
+  cy: number,
+  innerRadius: number,
+  outerRadius: number,
+  startAngle: number,
+  endAngle: number,
+  curveOffset: number,
+) => {
+  const middleAngle = (startAngle + endAngle) / 2
+
+  const start = pointOnCircle(cx, cy, innerRadius, startAngle)
+  const end = pointOnCircle(cx, cy, innerRadius, endAngle)
+
+  const topControlA = pointOnCircle(cx, cy, outerRadius, middleAngle - curveOffset)
+  const topControlB = pointOnCircle(cx, cy, outerRadius, middleAngle + curveOffset)
+  const bottomControlA = pointOnCircle(
+    cx,
+    cy,
+    outerRadius * 0.75,
+    middleAngle + curveOffset,
+  )
+  const bottomControlB = pointOnCircle(
+    cx,
+    cy,
+    outerRadius * 0.75,
+    middleAngle - curveOffset,
+  )
+
+  return [
+    `M ${start.x} ${start.y}`,
+    `C ${topControlA.x} ${topControlA.y}, ${topControlB.x} ${topControlB.y}, ${end.x} ${end.y}`,
+    `C ${bottomControlA.x} ${bottomControlA.y}, ${bottomControlB.x} ${bottomControlB.y}, ${start.x} ${start.y}`,
+    'Z',
+  ].join(' ')
+}
+
+type MandalaConfig = {
+  id: string
+  title: string
+  prompt: string
+  phase: number
+  innerSlices: number
+  innerPetals: number
+  midPetals: number
+  mosaicSlices: number
+  outerPetals: number
+}
+
+const createMandalaArtwork = (config: MandalaConfig): Artwork => {
+  const cx = 500
+  const cy = 500
+
+  const regions: Region[] = [
+    { id: `${config.id}_core_1`, d: circlePath(cx, cy, 62) },
+    { id: `${config.id}_core_2`, d: ringSlicePath(cx, cy, 72, 102, 0, TAU) },
+  ]
+
+  for (let i = 0; i < config.innerSlices; i += 1) {
+    const step = TAU / config.innerSlices
+    const gap = step * 0.09
+    const start = config.phase + i * step + gap
+    const end = config.phase + (i + 1) * step - gap
+    regions.push({
+      id: `${config.id}_inner_slice_${i}`,
+      d: ringSlicePath(cx, cy, 112, 174, start, end),
+    })
+  }
+
+  for (let i = 0; i < config.innerPetals; i += 1) {
+    const step = TAU / config.innerPetals
+    const gap = step * 0.12
+    const start = config.phase * 0.55 + i * step + gap
+    const end = config.phase * 0.55 + (i + 1) * step - gap
+    regions.push({
+      id: `${config.id}_inner_petal_${i}`,
+      d: petalPath(cx, cy, 182, 282, start, end, step * 0.2),
+    })
+  }
+
+  for (let i = 0; i < config.midPetals; i += 1) {
+    const step = TAU / config.midPetals
+    const gap = step * 0.16
+    const start = config.phase * 0.75 + i * step + gap
+    const end = config.phase * 0.75 + (i + 1) * step - gap
+    regions.push({
+      id: `${config.id}_mid_petal_${i}`,
+      d: petalPath(cx, cy, 292, 390, start, end, step * 0.18),
+    })
+  }
+
+  for (let i = 0; i < config.mosaicSlices; i += 1) {
+    const step = TAU / config.mosaicSlices
+    const gap = step * 0.16
+    const start = config.phase + i * step + gap
+    const end = config.phase + (i + 1) * step - gap
+    regions.push({
+      id: `${config.id}_mosaic_${i}`,
+      d: ringSlicePath(cx, cy, 398, 442, start, end),
+    })
+  }
+
+  for (let i = 0; i < config.outerPetals; i += 1) {
+    const step = TAU / config.outerPetals
+    const gap = step * 0.14
+    const start = config.phase * 1.4 + i * step + gap
+    const end = config.phase * 1.4 + (i + 1) * step - gap
+    regions.push({
+      id: `${config.id}_outer_petal_${i}`,
+      d: petalPath(cx, cy, 450, 495, start, end, step * 0.21),
+    })
+  }
+
+  return {
+    id: config.id,
+    title: config.title,
+    prompt: config.prompt,
+    viewBox: '0 0 1000 1000',
+    regions,
+  }
+}
+
 const ARTWORKS: Artwork[] = [
-  {
-    id: 'moon-garden',
-    title: 'Moon Garden',
-    prompt: 'Petals and leaves around a calm moon',
-    viewBox: '0 0 1000 1000',
-    regions: [
-      { id: 'm_center', d: 'M500 310a165 165 0 1 0 0.1 0z' },
-      {
-        id: 'm_ring_1',
-        d: 'M500 110c78 98 78 98 190 56-32 122-32 122 62 196-123 18-123 18-153 134-89-87-89-87-218 0-30-116-30-116-153-134 94-74 94-74 62-196 112 42 112 42 190-56z',
-      },
-      {
-        id: 'm_petal_1',
-        d: 'M500 32c44 62 44 62 0 124-44-62-44-62 0-124z',
-      },
-      {
-        id: 'm_petal_2',
-        d: 'M788 124c-9 76-9 76-75 98 9-76 9-76 75-98z',
-      },
-      {
-        id: 'm_petal_3',
-        d: 'M918 370c-72 24-72 24-121-25 72-24 72-24 121 25z',
-      },
-      {
-        id: 'm_petal_4',
-        d: 'M870 668c-62-45-62-45-48-113 62 45 62 45 48 113z',
-      },
-      {
-        id: 'm_petal_5',
-        d: 'M656 870c-23-72-23-72 29-121 23 72 23 72-29 121z',
-      },
-      {
-        id: 'm_petal_6',
-        d: 'M344 870c52-49 52-49 29-121-52 49-52 49-29 121z',
-      },
-      {
-        id: 'm_petal_7',
-        d: 'M130 668c48-68 48-68 48-113-48 68-48 68-48 113z',
-      },
-      {
-        id: 'm_petal_8',
-        d: 'M82 370c71 49 71 49 121-25-71-49-71-49-121 25z',
-      },
-      {
-        id: 'm_petal_9',
-        d: 'M212 124c66 22 66 22 75 98-66-22-66-22-75-98z',
-      },
-      {
-        id: 'm_leaf_1',
-        d: 'M265 530c105-50 105-50 80-150-105 50-105 50-80 150z',
-      },
-      {
-        id: 'm_leaf_2',
-        d: 'M735 530c-105-50-105-50-80-150 105 50 105 50 80 150z',
-      },
-      {
-        id: 'm_leaf_3',
-        d: 'M500 760c74-89 74-89 0-172-74 89-74 89 0 172z',
-      },
-      {
-        id: 'm_leaf_4',
-        d: 'M395 655c-24-110-24-110-135-117 24 110 24 110 135 117z',
-      },
-      {
-        id: 'm_leaf_5',
-        d: 'M605 655c24-110 24-110 135-117-24 110-24 110-135 117z',
-      },
-    ],
-  },
-  {
-    id: 'owl-temple',
-    title: 'Owl Temple',
-    prompt: 'A geometric owl with glowing eyes',
-    viewBox: '0 0 1000 1000',
-    regions: [
-      { id: 'o_head', d: 'M500 140c210 0 320 130 320 290S710 770 500 770 180 590 180 430s110-290 320-290z' },
-      { id: 'o_brow_left', d: 'M250 290c90-50 90-50 180 0-90 35-90 35-180 0z' },
-      { id: 'o_brow_right', d: 'M570 290c90-50 90-50 180 0-90 35-90 35-180 0z' },
-      { id: 'o_eye_left', d: 'M355 430a90 90 0 1 0 0.1 0z' },
-      { id: 'o_eye_right', d: 'M645 430a90 90 0 1 0 0.1 0z' },
-      { id: 'o_pupil_left', d: 'M355 430a42 42 0 1 0 0.1 0z' },
-      { id: 'o_pupil_right', d: 'M645 430a42 42 0 1 0 0.1 0z' },
-      { id: 'o_beak', d: 'M500 470l70 120h-140z' },
-      { id: 'o_chest_1', d: 'M500 555c95 70 95 70 0 140-95-70-95-70 0-140z' },
-      { id: 'o_chest_2', d: 'M395 585c70 55 70 55 0 115-70-55-70-55 0-115z' },
-      { id: 'o_chest_3', d: 'M605 585c-70 55-70 55 0 115 70-55 70-55 0-115z' },
-      { id: 'o_wing_left', d: 'M205 445c120 65 120 65 90 250-120-65-120-65-90-250z' },
-      { id: 'o_wing_right', d: 'M795 445c-120 65-120 65-90 250 120-65 120-65 90-250z' },
-      { id: 'o_orb_left', d: 'M270 830a60 60 0 1 0 0.1 0z' },
-      { id: 'o_orb_right', d: 'M730 830a60 60 0 1 0 0.1 0z' },
-    ],
-  },
-  {
-    id: 'sun-citadel',
-    title: 'Sun Citadel',
-    prompt: 'An ornate sun over calm waves',
-    viewBox: '0 0 1000 1000',
-    regions: [
-      { id: 's_core', d: 'M500 290a140 140 0 1 0 0.1 0z' },
-      { id: 's_ring', d: 'M500 110c118 0 215 97 215 215s-97 215-215 215-215-97-215-215 97-215 215-215zm0 70c-80 0-145 65-145 145s65 145 145 145 145-65 145-145-65-145-145-145z' },
-      { id: 's_ray_1', d: 'M500 12l40 88h-80z' },
-      { id: 's_ray_2', d: 'M706 72l20 95-70-35z' },
-      { id: 's_ray_3', d: 'M870 220l-40 88-45-66z' },
-      { id: 's_ray_4', d: 'M910 430l-88 40 10-79z' },
-      { id: 's_ray_5', d: 'M812 638l-95 20 35-70z' },
-      { id: 's_ray_6', d: 'M640 802l-88-40 66-45z' },
-      { id: 's_ray_7', d: 'M430 910l-40-88 79 10z' },
-      { id: 's_ray_8', d: 'M220 812l-20-95 70 35z' },
-      { id: 's_ray_9', d: 'M90 640l40-88 45 66z' },
-      { id: 's_ray_10', d: 'M42 430l88-40-10 79z' },
-      { id: 's_ray_11', d: 'M130 222l95-20-35 70z' },
-      { id: 's_ray_12', d: 'M300 72l88 40-66 45z' },
-      { id: 's_wave_1', d: 'M140 690c120-70 220 70 340 0s220 70 340 0v90c-120 70-220-70-340 0s-220-70-340 0z' },
-      { id: 's_wave_2', d: 'M110 810c120-70 220 70 340 0s220 70 340 0v120H110z' },
-    ],
-  },
+  createMandalaArtwork({
+    id: 'stella-orbit',
+    title: 'Stella Orbit',
+    prompt: 'Celestial mandala with layered petals and mosaic rings',
+    phase: 0,
+    innerSlices: 12,
+    innerPetals: 16,
+    midPetals: 18,
+    mosaicSlices: 24,
+    outerPetals: 28,
+  }),
+  createMandalaArtwork({
+    id: 'lotus-compass',
+    title: 'Lotus Compass',
+    prompt: 'Compass style bloom with rich symmetry and fine detail',
+    phase: 0.14,
+    innerSlices: 14,
+    innerPetals: 18,
+    midPetals: 20,
+    mosaicSlices: 26,
+    outerPetals: 30,
+  }),
+  createMandalaArtwork({
+    id: 'eclipse-harmony',
+    title: 'Eclipse Harmony',
+    prompt: 'High detail radial art for long relaxing coloring sessions',
+    phase: 0.28,
+    innerSlices: 16,
+    innerPetals: 20,
+    midPetals: 22,
+    mosaicSlices: 28,
+    outerPetals: 32,
+  }),
 ]
 
 const PALETTES = [
@@ -1050,7 +1131,7 @@ function App() {
                         d={region.d}
                         fill={artworkState.fills[region.id] ?? '#fffef8'}
                         stroke="#1e1e1e"
-                        strokeWidth="10"
+                        strokeWidth="6"
                         strokeLinejoin="round"
                         strokeLinecap="round"
                       />
@@ -1110,7 +1191,7 @@ function App() {
                   className={hintRegionId === region.id ? 'hint-region' : ''}
                   fill={activeState.fills[region.id] ?? '#fffef8'}
                   stroke="#1d1d1d"
-                  strokeWidth="10"
+                  strokeWidth="6"
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   onClick={() => onRegionClick(region.id)}
