@@ -251,6 +251,59 @@ a:focus-visible {
   gap: 0.45rem;
 }
 
+.simulator-note {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(176, 203, 227, 0.18);
+  background: rgba(20, 37, 54, 0.72);
+}
+
+.risk-pill {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-weight: 700;
+  margin: 0.35rem 0;
+}
+
+.risk-high {
+  background: rgba(201, 65, 65, 0.22);
+  color: #ffb4b4;
+  border: 1px solid rgba(201, 65, 65, 0.4);
+}
+
+.risk-medium {
+  background: rgba(194, 143, 35, 0.25);
+  color: #f8e0a7;
+  border: 1px solid rgba(194, 143, 35, 0.4);
+}
+
+.risk-low {
+  background: rgba(68, 176, 122, 0.25);
+  color: #b2f1cf;
+  border: 1px solid rgba(68, 176, 122, 0.4);
+}
+
+.distractor-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.distractor-list li {
+  background: rgba(18, 32, 48, 0.6);
+  border: 1px solid rgba(176, 203, 227, 0.14);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .progress-bars {
   display: grid;
   gap: 0.7rem;

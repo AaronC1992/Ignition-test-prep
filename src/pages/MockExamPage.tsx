@@ -13,86 +13,49 @@ type ExamResult = {
   missedQuestions: Question[]
 }
 
+type DomainReadiness = {
+  topic: string
+  correct: number
+  total: number
+  percent: number
+  risk: 'High risk' | 'Medium risk' | 'Low risk'
+}
+
 const lengths = [25, 50, 75, 100] as const
+const secondsPerQuestion = 72
+
+const toAnswerArray = (answer: string | string[] | undefined) =>
+  Array.isArray(answer) ? answer : answer ? [answer] : []
+
+const getChoiceStatus = (question: Question, choiceId: string) => {
+  if (Array.isArray(question.correctAnswer)) {
+    return question.correctAnswer.includes(choiceId)
+  }
+
+  return question.correctAnswer === choiceId
+}
+
+const getRiskLevel = (percent: number): DomainReadiness['risk'] => {
+  if (percent < 65) {
+    return 'High risk'
+  }
+  if (percent < 80) {
+    return 'Medium risk'
+  }
+  return 'Low risk'
+}
 
 export function MockExamPage() {
   const { state, recordMockExamAttempt } = useStudyState()
   const [length, setLength] = useState<typeof lengths[number]>(state.settings.defaultQuizLength)
   const [difficulty, setDifficulty] = useState(state.settings.questionDifficulty)
-  const [timerOn, setTimerOn] = useState(state.settings.timerEnabled)
-  const [timerMinutes, setTimerMinutes] = useState(30)
   const [started, setStarted] = useState(false)
   const [examQuestions, setExamQuestions] = useState<Question[]>([])
   const [answers, setAnswers] = useState<AnswerState>({})
-  const [flagged, setFlagged] = useState<string[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [submitted, setSubmitted] = useState(false)
   const [result, setResult] = useState<ExamResult | null>(null)
-  const [timeLeft, setTimeLeft] = useState(timerMinutes * 60)
-
-  useEffect(() => {
-    if (!started || !timerOn || submitted) {
-      return undefined
-    }
-
-    const timer = window.setInterval(() => {
-      setTimeLeft((current) => Math.max(0, current - 1))
-    }, 1000)
-
-    return () => window.clearInterval(timer)
-  }, [started, timerOn, submitted])
-
-  useEffect(() => {
-    if (timerOn) {
-      setTimeLeft(timerMinutes * 60)
-    }
-  }, [timerMinutes, timerOn])
-
-  const topicBreakdown = useMemo(() => {
-    const breakdown = new Map<string, { correct: number; total: number }>()
-    for (const question of examQuestions) {
-      const current = breakdown.get(question.topic) ?? { correct: 0, total: 0 }
-      const isCorrect = result?.answers[question.id] ?? false
-      current.total += 1
-      current.correct += isCorrect ? 1 : 0
-      breakdown.set(question.topic, current)
-    }
-    return Array.from(breakdown.entries())
-  }, [examQuestions, result])
-
-  const activeQuestion = examQuestions[currentIndex]
-
-  const startExam = () => {
-    const filtered = filterByDifficulty(quizQuestions, difficulty)
-    const questions = buildMockExam(filtered, length).map((question) => ({
-      ...question,
-      choices: question.choices ? shuffleQuestionChoices(question.choices) : undefined,
-    }))
-
-    setExamQuestions(questions)
-    setAnswers({})
-    setFlagged([])
-    setCurrentIndex(0)
-    setSubmitted(false)
-    setResult(null)
-    setStarted(true)
-    setTimeLeft(timerMinutes * 60)
-  }
-
-  const saveAnswer = (question: Question, value: string) => {
-    if (question.type === 'multiple-choice') {
-      const current = Array.isArray(answers[question.id]) ? (answers[question.id] as string[]) : []
-      const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
-      setAnswers((currentAnswers) => ({ ...currentAnswers, [question.id]: next }))
-      return
-    }
-
-    setAnswers((currentAnswers) => ({ ...currentAnswers, [question.id]: value }))
-  }
-
-  const toggleFlag = (questionId: string) => {
-    setFlagged((current) => (current.includes(questionId) ? current.filter((item) => item !== questionId) : [...current, questionId]))
-  }
+  const [timeLeft, setTimeLeft] = useState(length * secondsPerQuestion)
 
   const submitExam = () => {
     const answerResults: Record<string, boolean> = {}
@@ -115,6 +78,98 @@ export function MockExamPage() {
     recordMockExamAttempt(attempt)
     setResult({ score, total: examQuestions.length, answers: answerResults, missedQuestions })
     setSubmitted(true)
+  }
+
+  useEffect(() => {
+    if (!started || submitted) {
+      return undefined
+    }
+
+    const timer = window.setInterval(() => {
+      setTimeLeft((current) => Math.max(0, current - 1))
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [started, submitted])
+
+  useEffect(() => {
+    if (started && !submitted && timeLeft === 0) {
+      submitExam()
+    }
+  }, [started, submitted, timeLeft])
+
+  useEffect(() => {
+    setTimeLeft(length * secondsPerQuestion)
+  }, [length])
+
+  const domainReadiness = useMemo<DomainReadiness[]>(() => {
+    const breakdown = new Map<string, { correct: number; total: number }>()
+    for (const question of examQuestions) {
+      const current = breakdown.get(question.topic) ?? { correct: 0, total: 0 }
+      const isCorrect = result?.answers[question.id] ?? false
+      current.total += 1
+      current.correct += isCorrect ? 1 : 0
+      breakdown.set(question.topic, current)
+    }
+    return Array.from(breakdown.entries())
+      .map(([topic, value]) => {
+        const percent = value.total ? Math.round((value.correct / value.total) * 100) : 0
+        return {
+          topic,
+          correct: value.correct,
+          total: value.total,
+          percent,
+          risk: getRiskLevel(percent),
+        }
+      })
+      .sort((a, b) => a.percent - b.percent)
+  }, [examQuestions, result])
+
+  const overallPercent = result ? Math.round((result.score / result.total) * 100) : 0
+  const overallRisk = getRiskLevel(overallPercent)
+
+  const activeQuestion = examQuestions[currentIndex]
+  const activeAnswer = activeQuestion ? answers[activeQuestion.id] : undefined
+  const canLockAnswer = Array.isArray(activeAnswer) ? activeAnswer.length > 0 : Boolean(activeAnswer)
+
+  const startExam = () => {
+    const filtered = filterByDifficulty(quizQuestions, difficulty)
+    const questions = buildMockExam(filtered, length).map((question) => ({
+      ...question,
+      choices: question.choices ? shuffleQuestionChoices(question.choices) : undefined,
+    }))
+
+    setExamQuestions(questions)
+    setAnswers({})
+    setCurrentIndex(0)
+    setSubmitted(false)
+    setResult(null)
+    setStarted(true)
+    setTimeLeft(length * secondsPerQuestion)
+  }
+
+  const saveAnswer = (question: Question, value: string) => {
+    if (question.type === 'multiple-choice') {
+      const current = Array.isArray(answers[question.id]) ? (answers[question.id] as string[]) : []
+      const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+      setAnswers((currentAnswers) => ({ ...currentAnswers, [question.id]: next }))
+      return
+    }
+
+    setAnswers((currentAnswers) => ({ ...currentAnswers, [question.id]: value }))
+  }
+
+  const lockAndContinue = () => {
+    if (!activeQuestion || !canLockAnswer) {
+      return
+    }
+
+    if (currentIndex >= examQuestions.length - 1) {
+      submitExam()
+      return
+    }
+
+    setCurrentIndex((current) => current + 1)
   }
 
   const createStudyPlan = () => {
@@ -143,34 +198,21 @@ export function MockExamPage() {
             <option value="advanced">Advanced</option>
           </select>
         </label>
-        <label>
-          Timer
-          <select value={timerOn ? 'on' : 'off'} onChange={(event) => setTimerOn(event.target.value === 'on')}>
-            <option value="off">Off</option>
-            <option value="on">On</option>
-          </select>
-        </label>
-        <label>
-          Timer minutes
-          <input type="number" min={5} value={timerMinutes} onChange={(event) => setTimerMinutes(Number(event.target.value))} />
-        </label>
+        <p className="simulator-note">Simulator timing is {secondsPerQuestion} seconds per question with one pass only.</p>
       </section>
 
       <section className="section-card">
-        <h2>Mock Written Exam</h2>
-        <p>This is an unofficial practice exam. It does not claim any official certification score or time rule.</p>
-        <button type="button" onClick={startExam}>Start exam</button>
+        <h2>Full Exam Simulator</h2>
+        <p>This mode is timed, gives one pass only, and shows your score report when finished.</p>
+        <button type="button" onClick={startExam}>Start simulator</button>
         {started ? <p>{submitted ? 'Exam submitted' : `Question ${currentIndex + 1} of ${examQuestions.length}`}</p> : null}
-        {timerOn && started && !submitted ? <p>Time left {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</p> : null}
+        {started && !submitted ? <p>Time left {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</p> : null}
       </section>
 
       {started && activeQuestion ? (
         <article className="section-card">
-          <p className="eyebrow">Flagged {flagged.includes(activeQuestion.id) ? 'Yes' : 'No'}</p>
+          <p className="eyebrow">One pass simulator</p>
           <h3>{activeQuestion.prompt}</h3>
-          <button type="button" className="secondary" onClick={() => toggleFlag(activeQuestion.id)}>
-            {flagged.includes(activeQuestion.id) ? 'Unflag for review' : 'Flag for review'}
-          </button>
 
           <div className="answer-grid">
             {activeQuestion.choices?.map((choice) => (
@@ -187,9 +229,9 @@ export function MockExamPage() {
           </div>
 
           <div className="hero-actions">
-            <button type="button" className="secondary" onClick={() => setCurrentIndex((current) => Math.max(0, current - 1))}>Previous</button>
-            <button type="button" className="secondary" onClick={() => setCurrentIndex((current) => Math.min(examQuestions.length - 1, current + 1))}>Next</button>
-            <button type="button" onClick={submitExam}>Submit exam</button>
+            <button type="button" onClick={lockAndContinue} disabled={!canLockAnswer}>
+              {currentIndex === examQuestions.length - 1 ? 'Lock answer and finish exam' : 'Lock answer and continue'}
+            </button>
           </div>
         </article>
       ) : null}
@@ -198,20 +240,52 @@ export function MockExamPage() {
         <section className="section-card">
           <h3>Score report</h3>
           <p>{result.score} out of {result.total} correct</p>
-          <p>Topic breakdown</p>
+          <p className={`risk-pill ${overallRisk === 'High risk' ? 'risk-high' : overallRisk === 'Medium risk' ? 'risk-medium' : 'risk-low'}`}>
+            Overall readiness: {overallPercent}% • {overallRisk}
+          </p>
+
+          <h3>Domain readiness scoring</h3>
           <ul>
-            {topicBreakdown.map(([topic, breakdown]) => (
-              <li key={topic}>{topic} {breakdown.correct}/{breakdown.total}</li>
+            {domainReadiness.map((domain) => (
+              <li key={domain.topic}>
+                <strong>{domain.topic}</strong> {domain.correct}/{domain.total} ({domain.percent}%)
+                {' '}
+                <span className={`risk-pill ${domain.risk === 'High risk' ? 'risk-high' : domain.risk === 'Medium risk' ? 'risk-medium' : 'risk-low'}`}>
+                  {domain.risk}
+                </span>
+              </li>
             ))}
           </ul>
 
-          <h3>Review every answer</h3>
+          <h3>Distractor analysis for missed questions</h3>
           <div className="quiz-stack">
-            {examQuestions.map((question) => (
+            {result.missedQuestions.map((question) => (
               <article className="section-card" key={question.id}>
                 <h4>{question.prompt}</h4>
-                <p>{result.answers[question.id] ? 'Correct' : 'Needs review'}</p>
-                <p>{question.explanation}</p>
+                <p>Needs review</p>
+                <ul className="distractor-list">
+                  {(question.choices ?? []).map((choice) => {
+                    const isCorrectChoice = getChoiceStatus(question, choice.id)
+                    const isSelectedChoice = toAnswerArray(answers[question.id]).includes(choice.id)
+
+                    let rationale = `Incorrect option. ${question.explanation}`
+                    if (isCorrectChoice) {
+                      rationale = `Correct option. ${question.explanation}`
+                    } else if (isSelectedChoice) {
+                      rationale = `Selected but incorrect. ${question.explanation}`
+                    }
+
+                    return (
+                      <li key={choice.id}>
+                        <strong>{choice.id}.</strong> {choice.label}
+                        {' '}
+                        <span>{isCorrectChoice ? 'Right' : 'Wrong'}</span>
+                        {' '}
+                        <div>{rationale}</div>
+                      </li>
+                    )
+                  })}
+                </ul>
               </article>
             ))}
           </div>
