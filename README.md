@@ -1,83 +1,36 @@
-# Chromatic Haven
+# Ignition Core Exam Prep
 
-![Chromatic Haven social preview](public/social-preview.svg)
+Ignition Core Exam Prep is a local React and TypeScript study app for practicing Ignition Core concepts aligned to Ignition Platform 8.1.45.
 
-## Quick Start
+## Features
 
-- [Play Now Instant](https://stackblitz.com/github/AaronC1992/chromatic-haven?startScript=dev)
-- [Play Now Live Site](https://aaronc1992.github.io/chromatic-haven/)
-- [Start App Locally](#local-development)
-- [Open In GitHub Codespaces](https://github.com/AaronC1992/chromatic-haven/codespaces)
-- [View Run Commands](#local-development)
+- Module based study lessons
+- Knowledge quizzes with explanations
+- Mock written exam practice
+- Flashcards with local progress tracking
+- Hands on lab simulator checklists
+- Troubleshooting scenario drills
+- Searchable glossary
 
-Play Now Instant launches directly from this GitHub repository in the browser.
+## Local development
 
-Chromatic Haven is an adult coloring game app designed for mobile and desktop web. The app is installable as a Progressive Web App and includes gameplay systems found in top color game experiences.
+1. Install dependencies:
 
-## Core Gameplay
+   npm install
 
-- Multi scene gallery with progress tracking
-- Region fill tool for fast coloring
-- Brush and erase tools for detail painting
-- Undo and redo history per scene
-- Palette presets and custom color picker
-- Hint system for next region guidance
-- Focus mode for distraction free painting
-- Local save support
-- PNG export of finished artwork
+2. Start development server:
 
-## Progression Systems
+   npm run dev
 
-- Daily challenge with claimable gem rewards
-- Achievement unlock system
-- Streak tracking by active day
-- Scene completion bonuses
-- Lightweight reward economy
+3. Build for production:
 
-## Platform Support
+   npm run build
 
-- Desktop browser
-- Mobile browser
-- Installable PWA experience on supported browsers
+4. Run tests:
 
-## Tech Stack
+   npm test
 
-- React 19
-- TypeScript
-- Vite 8
-- vite plugin pwa
+## Notes
 
-## Local Development
-
-```bash
-npm install
-npm run dev
-```
-
-## Quality Checks
-
-```bash
-npm run lint
-npm run build
-```
-
-## Production Build
-
-```bash
-npm run build
-npm run preview
-```
-
-## Install As App
-
-1. Open the deployed app in a browser that supports PWA install.
-2. Use the browser install prompt or menu option to add the app.
-3. Launch from home screen on mobile or desktop app launcher on desktop.
-
-## Next Level Roadmap
-
-- User account login and cloud sync saves
-- Premium content packs
-- Seasonal challenge rotations
-- Community showcase feed
-- Advanced brush textures and blend modes
+- This app is unofficial practice content and is not an official certification product.
+- Progress data is stored in browser local storage.
