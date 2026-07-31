@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: '/chromatic-haven/',
+  base: '/Ignition-test-prep/',
   plugins: [react()],
   test: {
     environment: 'node',
