@@ -1,5 +1,7 @@
 # Ignition Core Exam Prep
 
+[![Play Now](https://img.shields.io/badge/Play%20Now-Launch%20App-2ea44f?style=for-the-badge)](https://aaronc1992.github.io/Ignition-test-prep/)
+
 Ignition Core Exam Prep is a local React and TypeScript study app for practicing Ignition Core concepts aligned to Ignition Platform 8.1.45.
 
 ## Features
