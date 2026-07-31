@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { flashcards as baseFlashcards } from '../data/flashcards'
 import { isFlashcardDue, nextFlashcardReview } from '../services/progress'
 import { useStudyState } from '../state/study-state'
@@ -10,7 +10,8 @@ export function FlashcardsPage() {
   const [topicFilter, setTopicFilter] = useState('all')
   const [difficultyFilter, setDifficultyFilter] = useState('all')
   const [masteryFilter, setMasteryFilter] = useState<FlashcardFilter>('all')
-  const [activeCardId, setActiveCardId] = useState(baseFlashcards[0]?.id ?? '')
+  const [activeCardIndex, setActiveCardIndex] = useState(0)
+  const [isFlipped, setIsFlipped] = useState(false)
 
   const cards = useMemo(() => {
     return baseFlashcards.map((card) => {
@@ -39,7 +40,37 @@ export function FlashcardsPage() {
     return matchesTopic && matchesDifficulty && matchesMastery
   })
 
-  const activeCard = filteredCards.find((card) => card.id === activeCardId) ?? filteredCards[0]
+  useEffect(() => {
+    setActiveCardIndex(0)
+    setIsFlipped(false)
+  }, [topicFilter, difficultyFilter, masteryFilter])
+
+  useEffect(() => {
+    if (activeCardIndex > Math.max(filteredCards.length - 1, 0)) {
+      setActiveCardIndex(0)
+      setIsFlipped(false)
+    }
+  }, [activeCardIndex, filteredCards.length])
+
+  const activeCard = filteredCards[activeCardIndex]
+
+  const goToPrevious = () => {
+    if (!filteredCards.length) {
+      return
+    }
+
+    setActiveCardIndex((current) => (current - 1 + filteredCards.length) % filteredCards.length)
+    setIsFlipped(false)
+  }
+
+  const goToNext = () => {
+    if (!filteredCards.length) {
+      return
+    }
+
+    setActiveCardIndex((current) => (current + 1) % filteredCards.length)
+    setIsFlipped(false)
+  }
 
   return (
     <div className="page-stack">
@@ -78,39 +109,52 @@ export function FlashcardsPage() {
         </label>
       </section>
 
-      <section className="flashcard-grid">
-        <aside className="section-card flashcard-list">
-          {filteredCards.length ? filteredCards.map((card) => (
-            <button
-              key={card.id}
-              type="button"
-              className={card.id === activeCard?.id ? 'lesson-pill active' : 'lesson-pill'}
-              onClick={() => setActiveCardId(card.id)}
-            >
-              <span>{card.term}</span>
-              <small>{card.topic}</small>
-            </button>
-          )) : <p>No cards match the current filters.</p>}
-        </aside>
-
-        <article className="section-card">
-          {activeCard ? (
-            <>
+      <section className="section-card flashcard-stage">
+        {activeCard ? (
+          <>
+            <div className="flashcard-topbar">
               <p className="eyebrow">{activeCard.topic}</p>
-              <h3>{activeCard.term}</h3>
-              <p><strong>Answer:</strong> {activeCard.answer}</p>
-              {activeCard.example ? <p><strong>Example:</strong> {activeCard.example}</p> : null}
+              <p>Card {activeCardIndex + 1} of {filteredCards.length}</p>
+            </div>
+
+            <button
+              type="button"
+              className={isFlipped ? 'flashcard-flip is-flipped' : 'flashcard-flip'}
+              onClick={() => setIsFlipped((value) => !value)}
+              aria-pressed={isFlipped}
+              aria-label="Flip flash card"
+            >
+              <span className="flashcard-face flashcard-front">
+                <small>Question</small>
+                <h3>{activeCard.term}</h3>
+                <p>Click to reveal answer</p>
+              </span>
+
+              <span className="flashcard-face flashcard-back">
+                <small>Answer</small>
+                <p>{activeCard.answer}</p>
+                {activeCard.example ? <p><strong>Example:</strong> {activeCard.example}</p> : null}
+              </span>
+            </button>
+
+            <div className="flashcard-nav">
+              <button type="button" className="secondary" onClick={goToPrevious}>Previous card</button>
+              <button type="button" onClick={goToNext}>Next card</button>
+            </div>
+
+            <div className="flashcard-meta">
               <p>Difficulty: {activeCard.difficulty}</p>
               <p>Status: {activeCard.mastered ? 'Mastered' : 'Not mastered'}</p>
               <p>Due for review: {isFlashcardDue(activeCard.dueAt) ? 'Yes' : 'Not yet'}</p>
-              <div className="hero-actions">
-                <button type="button" onClick={() => toggleFlashcardMastery(activeCard.id, true)}>Mark mastered</button>
-                <button type="button" className="secondary" onClick={() => toggleFlashcardMastery(activeCard.id, false)}>Mark not mastered</button>
-              </div>
               <p>Next review interval: {nextFlashcardReview(state.progress.flashcardReviews[activeCard.id]?.intervalDays ?? 0)} day(s)</p>
-            </>
-          ) : <p>Select a flashcard to review.</p>}
-        </article>
+            </div>
+
+            <div className="hero-actions">
+              <button type="button" onClick={() => toggleFlashcardMastery(activeCard.id, true)}>Mark mastered</button>
+              <button type="button" className="secondary" onClick={() => toggleFlashcardMastery(activeCard.id, false)}>Mark not mastered</button>
+            </div>
+          </>
+        ) : <p>No cards match the current filters.</p>}
       </section>
     </div>
   )
