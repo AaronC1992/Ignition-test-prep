@@ -30,13 +30,14 @@ export function TroubleshootingPage() {
                 setShowResolution(false)
               }}
             >
-              {scenario.prompt}
+              {scenario.title}
             </button>
           ))}
         </aside>
 
         <article className="section-card">
           <p className="eyebrow">Scenario question</p>
+          <p>{activeScenario.title}</p>
           <h3>{activeScenario.prompt}</h3>
           <div className="hero-actions">
             <button type="button" onClick={() => setShowResolution((value) => !value)}>

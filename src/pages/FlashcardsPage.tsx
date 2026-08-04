@@ -126,12 +126,14 @@ export function FlashcardsPage() {
             >
               <span className="flashcard-face flashcard-front">
                 <small>Question</small>
-                <h3>{activeCard.term}</h3>
+                <h3>{activeCard.prompt}</h3>
+                <p><strong>Key term:</strong> {activeCard.term}</p>
                 <p>Click to reveal answer</p>
               </span>
 
               <span className="flashcard-face flashcard-back">
                 <small>Answer</small>
+                <h3>{activeCard.term}</h3>
                 <p>{activeCard.answer}</p>
                 {activeCard.example ? <p><strong>Example:</strong> {activeCard.example}</p> : null}
               </span>

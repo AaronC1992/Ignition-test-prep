@@ -10,6 +10,7 @@ import { TroubleshootingPage } from './pages/TroubleshootingPage'
 import { ProgressPage } from './pages/ProgressPage'
 import { QuizzesPage } from './pages/QuizzesPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { StudyGuidePage } from './pages/StudyGuidePage'
 import { StudyStateProvider } from './state/study-state'
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="study-guide" element={<StudyGuidePage />} />
           <Route path="lessons" element={<StudyLessonsPage />} />
           <Route path="flashcards" element={<FlashcardsPage />} />
           <Route path="quizzes" element={<QuizzesPage />} />

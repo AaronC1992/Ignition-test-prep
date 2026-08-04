@@ -1,4 +1,5 @@
 import type { AppState, Difficulty, Flashcard, Question, StudyModule } from '../types/app'
+import { studyGuideMetaByLessonId } from '../data/studyGuide'
 
 export interface ProgressSummary {
   completionPercentage: number
@@ -124,6 +125,33 @@ export const nextFlashcardReview = (attempts: number) => {
   return intervals[Math.min(attempts, intervals.length - 1)]
 }
 
+const normalizeRecommendationText = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+const scoreLessonMatch = (topic: string, lessonTitle: string) => {
+  const topicTokens = new Set(normalizeRecommendationText(topic))
+  const titleTokens = normalizeRecommendationText(lessonTitle)
+  const exactMatch = titleTokens.join(' ') === normalizeRecommendationText(topic).join(' ')
+  if (exactMatch) {
+    return 100
+  }
+
+  const tokenOverlap = titleTokens.filter((token) => topicTokens.has(token)).length
+  const titleContainsTopic = titleTokens.join(' ').includes(normalizeRecommendationText(topic).join(' '))
+  const topicContainsTitle = normalizeRecommendationText(topic).join(' ').includes(titleTokens.join(' '))
+
+  if (titleContainsTopic || topicContainsTitle) {
+    return 80 + tokenOverlap
+  }
+
+  return tokenOverlap * 10
+}
+
 export const buildWeakAreaRecommendation = ({
   topics,
   lessons,
@@ -137,14 +165,24 @@ export const buildWeakAreaRecommendation = ({
 }): WeakAreaRecommendation => {
   const weakestTopic = [...topics].sort((a, b) => (a.correct / a.total) - (b.correct / b.total))[0]
   const quizTopic = weakestTopic?.topic ?? 'Ignition Architecture'
-  const topicKey = quizTopic.toLowerCase().split(' ')[0] ?? quizTopic.toLowerCase()
-  const lessonIds = lessons
-    .filter((lesson) => quizTopic.toLowerCase().includes((lesson.title.toLowerCase().split(':')[0] ?? lesson.title.toLowerCase()).toLowerCase()))
-    .map((lesson) => lesson.id)
+  const matchedLessons = lessons
+    .map((lesson) => ({ lesson, score: scoreLessonMatch(quizTopic, lesson.title) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+
+  const lessonIds = matchedLessons.slice(0, 3).map(({ lesson }) => lesson.id)
   const flashcardIds = flashcards
-    .filter((card) => card.topic.toLowerCase().includes(topicKey))
+    .filter((card) => {
+      const cardTopicTokens = normalizeRecommendationText(card.topic)
+      const topicTokens = normalizeRecommendationText(quizTopic)
+      const topicOverlap = cardTopicTokens.filter((token) => topicTokens.includes(token)).length
+      const lessonMatch = lessonIds.includes(card.lessonId)
+      return lessonMatch || topicOverlap > 0 || card.topic === quizTopic
+    })
     .map((card) => card.id)
-  const labIds = labs.map((lab) => lab.id).slice(0, 1)
+  const labIds = Array.from(new Set(lessonIds.flatMap((lessonId) => studyGuideMetaByLessonId[lessonId]?.relatedLabIds ?? []))).filter((labId) =>
+    labs.some((lab) => lab.id === labId),
+  )
 
   return { lessonIds, flashcardIds, labIds, quizTopic }
 }

@@ -1,5 +1,6 @@
 export const navigationSections = [
   { path: '/', label: 'Dashboard' },
+  { path: '/study-guide', label: 'Exam Study Guide' },
   { path: '/lessons', label: 'Study Lessons' },
   { path: '/flashcards', label: 'Flashcards' },
   { path: '/quizzes', label: 'Knowledge Quizzes' },

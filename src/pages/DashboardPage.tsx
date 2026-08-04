@@ -20,6 +20,9 @@ export function DashboardPage() {
             Track lessons, practice questions, hands on labs, and review areas in a single local study workspace.
           </p>
           <div className="hero-actions">
+            <button type="button" className="secondary" onClick={() => navigate('/study-guide')}>
+              Open Study Guide
+            </button>
             <button type="button" onClick={() => navigate('/lessons')}>
               Continue Studying
             </button>

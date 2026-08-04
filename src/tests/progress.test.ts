@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultAppState } from '../services/localStorage'
 import {
   buildMockExam,
+  buildWeakAreaRecommendation,
   calculateAverage,
   calculateProgressSummary,
   identifyWeakTopics,
@@ -12,7 +13,7 @@ import { modules } from '../data/modules'
 import type { Flashcard, Question } from '../types/app'
 
 const flashcards: Flashcard[] = [
-  { id: '1', topic: 'A', term: 'A', answer: 'A', difficulty: 'beginner', mastered: false },
+  { id: '1', topic: 'A', lessonId: 'lesson-1', prompt: 'In the A topic, what does A mean in Ignition, and how would you explain it to another learner?', term: 'A', answer: 'A', difficulty: 'beginner', mastered: false },
 ]
 
 describe('progress helpers', () => {
@@ -48,6 +49,18 @@ describe('progress helpers', () => {
     } satisfies Question
 
     expect(scoreQuestionAnswer(question, 'a')).toBe(true)
+  })
+
+  it('builds lesson and flashcard recommendations from a weak topic that only loosely matches the lesson title', () => {
+    const recommendation = buildWeakAreaRecommendation({
+      topics: [{ topic: 'Tags', correct: 1, total: 4 }],
+      lessons: [{ id: 'tags', title: 'Tags and Tag Groups' }],
+      flashcards: [{ id: 'fc-1', topic: 'Tags', lessonId: 'tags', prompt: 'prompt', term: 'term', answer: 'answer', difficulty: 'beginner', mastered: false }],
+      labs: [{ id: 'lab-1', title: 'Lab 1' }],
+    })
+
+    expect(recommendation.lessonIds).toEqual(['tags'])
+    expect(recommendation.flashcardIds).toEqual(['fc-1'])
   })
 
   it('scores multiple answers order independently', () => {

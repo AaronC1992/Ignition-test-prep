@@ -36,6 +36,13 @@ export function LabsPage() {
         <p>{activeLab.instructions}</p>
 
         <section>
+          <h4>Preparation and assumptions</h4>
+          <ul>
+            {activeLab.preparation.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </section>
+
+        <section>
           <h4>Tasks</h4>
           <ol>
             {activeLab.steps.map((step) => (
@@ -65,6 +72,17 @@ export function LabsPage() {
           <h4>Self check checklist</h4>
           <ul>
             {activeLab.rubric.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </section>
+
+        <section>
+          <h4>Official references used</h4>
+          <ul>
+            {activeLab.resources.map((resource) => (
+              <li key={resource.url}>
+                <a href={resource.url} target="_blank" rel="noreferrer">{resource.label}</a>
+              </li>
+            ))}
           </ul>
         </section>
 

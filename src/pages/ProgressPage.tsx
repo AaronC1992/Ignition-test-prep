@@ -1,8 +1,10 @@
 import { lessons } from '../data/curriculum'
 import { labs } from '../data/labs'
 import { flashcards } from '../data/flashcards'
+import { troubleshootingScenarios } from '../data/troubleshooting'
 import { useStudyState } from '../state/study-state'
 import { buildWeakAreaRecommendation } from '../services/progress'
+import { studyGuideMetaByLessonId } from '../data/studyGuide'
 
 export function ProgressPage() {
   const { summary, state, weakTopics } = useStudyState()
@@ -11,6 +13,10 @@ export function ProgressPage() {
     .map((topic) => lessons.find((lesson) => lesson.title === topic.topic))
     .filter(Boolean)
   const recommendation = buildWeakAreaRecommendation({ topics: weakTopics, lessons, flashcards, labs })
+  const recommendedFlashcards = flashcards.filter((card) => recommendation.flashcardIds.includes(card.id)).slice(0, 6)
+  const recommendedLabs = labs.filter((lab) => recommendation.labIds.includes(lab.id))
+  const recommendedScenarioIds = Array.from(new Set(recommendation.lessonIds.flatMap((lessonId) => studyGuideMetaByLessonId[lessonId]?.relatedScenarioIds ?? [])))
+  const recommendedScenarios = troubleshootingScenarios.filter((scenario) => recommendedScenarioIds.includes(scenario.id)).slice(0, 5)
 
   return (
     <div className="page-stack">
@@ -55,8 +61,21 @@ export function ProgressPage() {
         </ul>
         <p>Suggested next step: repeat the lesson, then take a short module quiz again.</p>
         <p>Recommended short quiz topic: {recommendation.quizTopic}</p>
-        <p>Repeat lab: {recommendation.labIds.length ? recommendation.labIds.join(', ') : 'No lab repeat assigned'}</p>
-        <p>Flashcards to revisit: {recommendation.flashcardIds.length ? recommendation.flashcardIds.slice(0, 5).join(', ') : 'No flashcard targets yet'}</p>
+
+        <h3>Labs to repeat</h3>
+        <ul>
+          {recommendedLabs.length ? recommendedLabs.map((lab) => <li key={lab.id}>{lab.title}</li>) : <li>No lab repeat assigned</li>}
+        </ul>
+
+        <h3>Flashcards to revisit</h3>
+        <ul>
+          {recommendedFlashcards.length ? recommendedFlashcards.map((card) => <li key={card.id}>{card.term}</li>) : <li>No flashcard targets yet</li>}
+        </ul>
+
+        <h3>Troubleshooting drills to review</h3>
+        <ul>
+          {recommendedScenarios.length ? recommendedScenarios.map((scenario) => <li key={scenario.id}>{scenario.title}</li>) : <li>No troubleshooting drills assigned yet</li>}
+        </ul>
       </section>
 
       <section className="section-card">

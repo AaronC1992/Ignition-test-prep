@@ -50,6 +50,8 @@ export interface Lesson {
 export interface Flashcard {
   id: string
   topic: string
+  lessonId: string
+  prompt: string
   term: string
   answer: string
   difficulty: Difficulty
