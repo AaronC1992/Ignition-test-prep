@@ -5,10 +5,14 @@ import { calculateStudyStreak } from '../services/progress'
 import { useStudyState } from '../state/study-state'
 
 export function DashboardPage() {
-  const { state, summary } = useStudyState()
+  const { state, summary, studyPlan } = useStudyState()
   const navigate = useNavigate()
   const studyStreak = calculateStudyStreak(state.progress.studyDates)
   const nextLesson = modules.find((module) => !state.progress.completedLessonIds.includes(module.id)) ?? modules[0]!
+
+  const openPlanItem = (path: string, search?: string) => {
+    navigate(`${path}${search ?? ''}`)
+  }
 
   return (
     <div className="page-stack">
@@ -49,10 +53,31 @@ export function DashboardPage() {
       </section>
 
       <section className="section-card">
+        <h2>Today at a glance</h2>
+        <p>You have made {state.progress.dailyStudy.count} study actions toward a goal of {state.settings.dailyStudyGoal}.</p>
+        <p>Bookmarked lessons: {state.progress.lessonBookmarks.length}</p>
+      </section>
+
+      <section className="section-card">
         <h2>Topics needing review</h2>
         <p>These are estimated from quiz results and lesson progress inside the app.</p>
         <ul className="pill-list">
           {summary.topicsNeedingReview.length ? summary.topicsNeedingReview.map((topic) => <li key={topic}>{topic}</li>) : <li>No review flags yet</li>}
+        </ul>
+      </section>
+
+      <section className="section-card">
+        <h2>Adaptive study plan</h2>
+        <ul>
+          {studyPlan.length ? studyPlan.map((item) => (
+            <li key={item.title}>
+              <button type="button" className="plan-link" onClick={() => openPlanItem(item.route.path, item.route.search)}>
+                <strong>{item.title}</strong>
+                <p>{item.reason}</p>
+                <span>{item.action}</span>
+              </button>
+            </li>
+          )) : <li>No plan yet</li>}
         </ul>
       </section>
 
@@ -68,6 +93,15 @@ export function DashboardPage() {
         <button type="button" onClick={() => navigate('/lessons')}>
           Open next lesson
         </button>
+      </section>
+
+      <section className="section-card">
+        <h2>Quick practice</h2>
+        <div className="hero-actions">
+          <button type="button" onClick={() => navigate('/quizzes')}>Study quiz</button>
+          <button type="button" className="secondary" onClick={() => navigate('/mock-exam')}>Timed exam</button>
+          <button type="button" className="secondary" onClick={() => navigate('/flashcards')}>Review cards</button>
+        </div>
       </section>
     </div>
   )

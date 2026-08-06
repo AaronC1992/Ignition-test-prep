@@ -2,6 +2,8 @@ export type ThemeMode = 'light' | 'dark'
 
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced'
 
+export type QuizMode = 'study' | 'quick' | 'review'
+
 export type FlashcardMastery = 'mastered' | 'not mastered'
 
 export type QuestionType =
@@ -70,10 +72,14 @@ export interface StudyProgress {
   completedLessonIds: string[]
   masteredFlashcardIds: string[]
   flashcardReviews: Record<string, { mastered: boolean; dueAt: string | null; intervalDays: number }>
-  quizAttempts: Array<{ topic: string; score: number; total: number; completedAt: string }>
+  quizAttempts: Array<{ topic: string; score: number; total: number; completedAt: string; mode: QuizMode; missedQuestionIds: string[] }>
   mockExamAttempts: Array<{ score: number; total: number; completedAt: string }>
   labCompletion: Record<string, boolean>
   labNotes: Record<string, string>
+  lessonBookmarks: string[]
+  lessonNotes: Record<string, string>
+  recentMissedQuestionIds: string[]
+  dailyStudy: { date: string | null; count: number }
   confidence: number
   lastStudyAt: string | null
   studyDates: string[]
@@ -84,6 +90,7 @@ export interface UserSettings {
   defaultQuizLength: 25 | 50 | 75 | 100
   timerEnabled: boolean
   questionDifficulty: Difficulty | 'mixed'
+  dailyStudyGoal: 3 | 5 | 10
 }
 
 export interface AppState {

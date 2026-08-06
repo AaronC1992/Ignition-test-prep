@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { flashcards as baseFlashcards } from '../data/flashcards'
 import { isFlashcardDue, nextFlashcardReview } from '../services/progress'
 import { useStudyState } from '../state/study-state'
@@ -7,6 +8,7 @@ type FlashcardFilter = 'all' | 'mastered' | 'not mastered' | 'due'
 
 export function FlashcardsPage() {
   const { state, toggleFlashcardMastery } = useStudyState()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [topicFilter, setTopicFilter] = useState('all')
   const [difficultyFilter, setDifficultyFilter] = useState('all')
   const [masteryFilter, setMasteryFilter] = useState<FlashcardFilter>('all')
@@ -26,6 +28,34 @@ export function FlashcardsPage() {
   }, [state.progress.flashcardReviews])
 
   const topics = Array.from(new Set(cards.map((card) => card.topic)))
+  const dueCount = cards.filter((card) => isFlashcardDue(card.dueAt ?? null)).length
+  const masteredCount = cards.filter((card) => card.mastered).length
+
+  useEffect(() => {
+    const topic = searchParams.get('topic')
+    const mastery = searchParams.get('mastery')
+    if (topic) {
+      setTopicFilter(topic)
+    }
+    if (mastery === 'all' || mastery === 'mastered' || mastery === 'not mastered' || mastery === 'due') {
+      setMasteryFilter(mastery)
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchParams)
+    if (topicFilter !== 'all') {
+      nextParams.set('topic', topicFilter)
+    } else {
+      nextParams.delete('topic')
+    }
+    if (masteryFilter !== 'all') {
+      nextParams.set('mastery', masteryFilter)
+    } else {
+      nextParams.delete('mastery')
+    }
+    setSearchParams(nextParams, { replace: true })
+  }, [topicFilter, masteryFilter])
 
   const filteredCards = cards.filter((card) => {
     const matchesTopic = topicFilter === 'all' || card.topic === topicFilter
@@ -38,7 +68,7 @@ export function FlashcardsPage() {
       (masteryFilter === 'due' && due)
 
     return matchesTopic && matchesDifficulty && matchesMastery
-  })
+  }).sort((left, right) => Number(isFlashcardDue(right.dueAt ?? null)) - Number(isFlashcardDue(left.dueAt ?? null)))
 
   useEffect(() => {
     setActiveCardIndex(0)
@@ -77,6 +107,7 @@ export function FlashcardsPage() {
       <section className="section-card">
         <h2>Flashcards</h2>
         <p>Review terms, mark cards mastered, and use the due filter to follow a simple spaced repetition loop stored in local storage.</p>
+        <p>Due now: {dueCount} of {cards.length}. Mastered: {masteredCount}.</p>
       </section>
 
       <section className="section-card settings-grid">

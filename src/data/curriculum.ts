@@ -6,6 +6,31 @@ const lesson = (seed: LessonSeed): Lesson => seed
 
 const question = (seed: Question): Question => seed
 
+const takeUniqueValues = (values: string[], excluded: string, limit: number) => {
+  const unique: string[] = []
+
+  for (const value of values) {
+    if (value === excluded || unique.includes(value)) {
+      continue
+    }
+
+    unique.push(value)
+
+    if (unique.length === limit) {
+      break
+    }
+  }
+
+  return unique
+}
+
+const buildSingleChoiceAnswers = (correct: string, distractors: string[]) => [
+  { id: 'a', label: correct },
+  { id: 'b', label: distractors[0] ?? correct },
+  { id: 'c', label: distractors[1] ?? correct },
+  { id: 'd', label: distractors[2] ?? correct },
+]
+
 export const lessons: Lesson[] = [
   lesson({
     id: 'architecture',
@@ -275,7 +300,7 @@ export const lessons: Lesson[] = [
   }),
 ]
 
-export const quizQuestions: Question[] = [
+const baseQuizQuestions: Question[] = [
   question({
     id: 'architecture 1',
     topic: 'Ignition Architecture',
@@ -983,5 +1008,66 @@ export const quizQuestions: Question[] = [
     sourceType: 'generated-practice',
   }),
 ]
+
+const buildGeneratedQuizQuestions = (): Question[] => {
+  const lessonTitles = lessons.map((entry) => entry.title)
+  const lessonReminders = lessons.flatMap((entry) => entry.examReminders)
+  const lessonTerms = Array.from(new Set(lessons.flatMap((entry) => entry.terminology)))
+
+  return lessons.flatMap((entry) => {
+    const titleDistractors = takeUniqueValues(lessonTitles, entry.title, 3)
+    const reminder = entry.examReminders[0] ?? entry.explanation
+    const reminderDistractors = takeUniqueValues(lessonReminders, reminder, 3)
+    const term = entry.terminology[0] ?? entry.title
+    const termDistractors = takeUniqueValues(lessonTerms, term, 3)
+
+    return [
+      question({
+        id: `${entry.id} generated topic`,
+        topic: entry.title,
+        subtopic: 'Topic',
+        difficulty: 'beginner',
+        type: 'single-choice',
+        prompt: 'Which topic best matches this lesson?',
+        choices: buildSingleChoiceAnswers(entry.title, titleDistractors),
+        correctAnswer: 'a',
+        explanation: `This lesson is focused on ${entry.title}.`,
+        reviewLessonId: entry.id,
+        version: '8.1.45',
+        sourceType: 'generated-practice',
+      }),
+      question({
+        id: `${entry.id} generated reminder`,
+        topic: entry.title,
+        subtopic: 'Reminder',
+        difficulty: 'intermediate',
+        type: 'single-choice',
+        prompt: 'Which reminder belongs to this lesson?',
+        choices: buildSingleChoiceAnswers(reminder, reminderDistractors),
+        correctAnswer: 'a',
+        explanation: `One key reminder for this lesson is ${reminder}.`,
+        reviewLessonId: entry.id,
+        version: '8.1.45',
+        sourceType: 'generated-practice',
+      }),
+      question({
+        id: `${entry.id} generated term`,
+        topic: entry.title,
+        subtopic: 'Terminology',
+        difficulty: 'intermediate',
+        type: 'single-choice',
+        prompt: 'Which term belongs to this lesson?',
+        choices: buildSingleChoiceAnswers(term, termDistractors),
+        correctAnswer: 'a',
+        explanation: `The term ${term} appears in this lesson.`,
+        reviewLessonId: entry.id,
+        version: '8.1.45',
+        sourceType: 'generated-practice',
+      }),
+    ]
+  })
+}
+
+export const quizQuestions: Question[] = [...baseQuizQuestions, ...buildGeneratedQuizQuestions()]
 
 export const moduleIds = lessons.map((entry) => entry.moduleId)

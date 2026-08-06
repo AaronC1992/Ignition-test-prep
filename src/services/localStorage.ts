@@ -11,6 +11,10 @@ export const defaultAppState = (): AppState => ({
     mockExamAttempts: [],
     labCompletion: {},
     labNotes: {},
+    lessonBookmarks: [],
+    lessonNotes: {},
+    recentMissedQuestionIds: [],
+    dailyStudy: { date: null, count: 0 },
     confidence: 3,
     lastStudyAt: null,
     studyDates: [],
@@ -20,6 +24,7 @@ export const defaultAppState = (): AppState => ({
     defaultQuizLength: 25,
     timerEnabled: false,
     questionDifficulty: 'mixed',
+    dailyStudyGoal: 5,
   },
 })
 

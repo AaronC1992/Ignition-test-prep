@@ -64,6 +64,18 @@ export function SettingsPage() {
             <option value="advanced">Advanced</option>
           </select>
         </label>
+
+        <label>
+          Daily study goal
+          <select
+            value={state.settings.dailyStudyGoal}
+            onChange={(event) => updateSettings({ dailyStudyGoal: Number(event.target.value) as 3 | 5 | 10 })}
+          >
+            <option value={3}>3 study actions</option>
+            <option value={5}>5 study actions</option>
+            <option value={10}>10 study actions</option>
+          </select>
+        </label>
       </section>
 
       <section className="section-card">

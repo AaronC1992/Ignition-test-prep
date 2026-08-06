@@ -9,11 +9,11 @@ import {
   loadAppState,
   saveAppState,
 } from '../services/localStorage'
-import { buildTopicAccuracy, calculateProgressSummary, identifyWeakTopics } from '../services/progress'
+import { buildAdaptiveStudyPlan, buildTopicAccuracy, calculateProgressSummary, identifyWeakTopics } from '../services/progress'
 import { applyTheme } from '../services/theme'
-import type { AppState, Lesson, Question, UserSettings } from '../types/app'
+import type { AppState, Lesson, Question, QuizMode, UserSettings } from '../types/app'
 
-type QuizAttempt = { topic: string; score: number; total: number; completedAt: string }
+type QuizAttempt = { topic: string; score: number; total: number; completedAt: string; mode: QuizMode; missedQuestionIds: string[] }
 
 type StudyStateContextValue = {
   state: AppState
@@ -29,13 +29,25 @@ type StudyStateContextValue = {
   recordMockExamAttempt: (attempt: { score: number; total: number; completedAt: string }) => void
   updateSettings: (settings: Partial<UserSettings>) => void
   toggleFlashcardMastery: (flashcardId: string, mastered: boolean) => void
+  toggleLessonBookmark: (lessonId: string, bookmarked: boolean) => void
+  setLessonNote: (lessonId: string, note: string) => void
   setLabCompletion: (labId: string, completed: boolean) => void
   setLabNote: (labId: string, note: string) => void
   resetLab: (labId: string) => void
   weakTopics: Array<{ topic: string; correct: number; total: number }>
+  studyPlan: ReturnType<typeof buildAdaptiveStudyPlan>
 }
 
 const studyDay = (value: string) => value.slice(0, 10)
+
+const bumpStudyCount = (progress: AppState['progress'], timestamp: string) => {
+  const day = studyDay(timestamp)
+  if (progress.dailyStudy.date === day) {
+    return { date: day, count: progress.dailyStudy.count + 1 }
+  }
+
+  return { date: day, count: 1 }
+}
 
 const StudyStateContext = createContext<StudyStateContextValue | null>(null)
 
@@ -53,6 +65,7 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
   const topicAccuracy = useMemo(() => buildTopicAccuracy(state.progress.quizAttempts), [state.progress.quizAttempts])
   const weakTopics = useMemo(() => identifyWeakTopics(topicAccuracy), [topicAccuracy])
   const summary = useMemo(() => calculateProgressSummary(modules, flashcards, state), [state])
+  const studyPlan = useMemo(() => buildAdaptiveStudyPlan({ state, lessons, flashcards }), [state])
 
   const value = useMemo<StudyStateContextValue>(() => ({
     state,
@@ -77,6 +90,7 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
           progress: {
             ...current.progress,
             completedLessonIds: [...current.progress.completedLessonIds, lessonId],
+            dailyStudy: bumpStudyCount(current.progress, today),
             lastStudyAt: today,
             studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(today)])),
           },
@@ -93,6 +107,7 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
           completedLessonIds: completed
             ? Array.from(new Set([...current.progress.completedLessonIds, lessonId]))
             : current.progress.completedLessonIds.filter((entry) => entry !== lessonId),
+          dailyStudy: completed ? bumpStudyCount(current.progress, today) : current.progress.dailyStudy,
           lastStudyAt: today,
           studyDates: completed
             ? Array.from(new Set([...current.progress.studyDates, studyDay(today)]))
@@ -101,24 +116,29 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
       }))
     },
     recordQuizAttempt: (attempt: QuizAttempt) => {
+      const completedAt = attempt.completedAt
       setState((current) => ({
         ...current,
         progress: {
           ...current.progress,
           quizAttempts: [...current.progress.quizAttempts, attempt],
-          lastStudyAt: attempt.completedAt,
-          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(attempt.completedAt)])),
+          recentMissedQuestionIds: attempt.missedQuestionIds,
+          dailyStudy: bumpStudyCount(current.progress, completedAt),
+          lastStudyAt: completedAt,
+          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(completedAt)])),
         },
       }))
     },
     recordMockExamAttempt: (attempt) => {
+      const completedAt = attempt.completedAt
       setState((current) => ({
         ...current,
         progress: {
           ...current.progress,
           mockExamAttempts: [...current.progress.mockExamAttempts, attempt],
-          lastStudyAt: attempt.completedAt,
-          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(attempt.completedAt)])),
+          dailyStudy: bumpStudyCount(current.progress, completedAt),
+          lastStudyAt: completedAt,
+          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(completedAt)])),
         },
       }))
     },
@@ -132,10 +152,11 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
       }))
     },
     toggleFlashcardMastery: (flashcardId: string, mastered: boolean) => {
+      const completedAt = new Date().toISOString()
       setState((current) => {
         const existing = current.progress.flashcardReviews[flashcardId] ?? { mastered: false, dueAt: null, intervalDays: 0 }
         const nextInterval = mastered ? Math.min(existing.intervalDays + 1, 14) : 0
-        const dueAt = mastered ? new Date(Date.now() + nextInterval * 86400000).toISOString() : new Date().toISOString()
+        const dueAt = mastered ? new Date(Date.now() + nextInterval * 86400000).toISOString() : completedAt
 
         return {
           ...current,
@@ -148,13 +169,46 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
               ...current.progress.flashcardReviews,
               [flashcardId]: { mastered, dueAt, intervalDays: nextInterval },
             },
-            lastStudyAt: new Date().toISOString(),
-            studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(new Date().toISOString())])),
+            dailyStudy: bumpStudyCount(current.progress, completedAt),
+            lastStudyAt: completedAt,
+            studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(completedAt)])),
           },
         }
       })
     },
+    toggleLessonBookmark: (lessonId: string, bookmarked: boolean) => {
+      const completedAt = new Date().toISOString()
+      setState((current) => ({
+        ...current,
+        progress: {
+          ...current.progress,
+          lessonBookmarks: bookmarked
+            ? Array.from(new Set([...current.progress.lessonBookmarks, lessonId]))
+            : current.progress.lessonBookmarks.filter((entry) => entry !== lessonId),
+          dailyStudy: bumpStudyCount(current.progress, completedAt),
+          lastStudyAt: completedAt,
+          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(completedAt)])),
+        },
+      }))
+    },
+    setLessonNote: (lessonId: string, note: string) => {
+      const completedAt = new Date().toISOString()
+      setState((current) => ({
+        ...current,
+        progress: {
+          ...current.progress,
+          lessonNotes: {
+            ...current.progress.lessonNotes,
+            [lessonId]: note,
+          },
+          dailyStudy: bumpStudyCount(current.progress, completedAt),
+          lastStudyAt: completedAt,
+          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(completedAt)])),
+        },
+      }))
+    },
     setLabCompletion: (labId: string, completed: boolean) => {
+      const completedAt = new Date().toISOString()
       setState((current) => ({
         ...current,
         progress: {
@@ -163,12 +217,14 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
             ...current.progress.labCompletion,
             [labId]: completed,
           },
-          lastStudyAt: new Date().toISOString(),
-          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(new Date().toISOString())])),
+          dailyStudy: bumpStudyCount(current.progress, completedAt),
+          lastStudyAt: completedAt,
+          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(completedAt)])),
         },
       }))
     },
     setLabNote: (labId: string, note: string) => {
+      const completedAt = new Date().toISOString()
       setState((current) => ({
         ...current,
         progress: {
@@ -177,12 +233,14 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
             ...current.progress.labNotes,
             [labId]: note,
           },
-          lastStudyAt: new Date().toISOString(),
-          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(new Date().toISOString())])),
+          dailyStudy: bumpStudyCount(current.progress, completedAt),
+          lastStudyAt: completedAt,
+          studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(completedAt)])),
         },
       }))
     },
     resetLab: (labId: string) => {
+      const completedAt = new Date().toISOString()
       setState((current) => {
         const nextCompletion = { ...current.progress.labCompletion }
         delete nextCompletion[labId]
@@ -195,14 +253,16 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
             ...current.progress,
             labCompletion: nextCompletion,
             labNotes: nextNotes,
-            lastStudyAt: new Date().toISOString(),
-            studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(new Date().toISOString())])),
+            dailyStudy: bumpStudyCount(current.progress, completedAt),
+            lastStudyAt: completedAt,
+            studyDates: Array.from(new Set([...current.progress.studyDates, studyDay(completedAt)])),
           },
         }
       })
     },
     weakTopics,
-  }), [state, summary, weakTopics])
+    studyPlan,
+  }), [state, summary, weakTopics, studyPlan])
 
   return <StudyStateContext.Provider value={value}>{children}</StudyStateContext.Provider>
 }

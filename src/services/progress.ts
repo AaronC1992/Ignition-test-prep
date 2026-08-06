@@ -25,6 +25,17 @@ export interface WeakAreaRecommendation {
   quizTopic: string
 }
 
+export interface StudyPlanItem {
+  title: string
+  reason: string
+  action: string
+  lessonId?: string
+  route: {
+    path: string
+    search?: string
+  }
+}
+
 export const buildTopicAccuracy = (attempts: Array<{ topic: string; score: number; total: number }>) => {
   const grouped = new Map<string, TopicAccuracy>()
 
@@ -66,6 +77,77 @@ export const calculateStudyStreak = (studyDates: string[]) => {
   }
 
   return Math.max(1, streak)
+}
+
+export const isFlashcardDue = (dueAt: string | null) => {
+  if (!dueAt) {
+    return true
+  }
+
+  return new Date(dueAt).getTime() <= Date.now()
+}
+
+export const buildAdaptiveStudyPlan = ({
+  state,
+  lessons,
+  flashcards,
+}: {
+  state: AppState
+  lessons: Array<{ id: string; title: string; summary?: string; explanation?: string }>
+  flashcards: Flashcard[]
+}): StudyPlanItem[] => {
+  const plan: StudyPlanItem[] = []
+  const dueFlashcards = flashcards.filter((card) => {
+    const review = state.progress.flashcardReviews[card.id]
+    return isFlashcardDue(review?.dueAt ?? null)
+  })
+
+  if (dueFlashcards.length) {
+    plan.push({
+      title: 'Review due flashcards',
+      reason: `${dueFlashcards.length} card${dueFlashcards.length === 1 ? '' : 's'} are ready`,
+      action: 'Open flashcards',
+      route: { path: '/flashcards', search: '?mastery=due' },
+    })
+  }
+
+  const topicAccuracy = buildTopicAccuracy(state.progress.quizAttempts)
+  const weakestTopic = identifyWeakTopics(topicAccuracy)[0]
+  const weakLesson = weakestTopic ? lessons.find((lesson) => lesson.title === weakestTopic.topic) : undefined
+
+  if (weakLesson && weakestTopic) {
+    plan.push({
+      title: `Revisit ${weakLesson.title}`,
+      reason: `Quiz accuracy is ${Math.round((weakestTopic.correct / weakestTopic.total) * 100)}%`,
+      action: 'Open lesson',
+      lessonId: weakLesson.id,
+      route: { path: '/lessons', search: `?lesson=${encodeURIComponent(weakLesson.id)}` },
+    })
+  }
+
+  if (state.progress.recentMissedQuestionIds.length) {
+    plan.push({
+      title: 'Review recent quiz misses',
+      reason: `${state.progress.recentMissedQuestionIds.length} question${state.progress.recentMissedQuestionIds.length === 1 ? '' : 's'} need another pass`,
+      action: 'Open quizzes',
+      route: weakLesson
+        ? { path: '/quizzes', search: `?lesson=${encodeURIComponent(weakLesson.id)}&mode=review` }
+        : { path: '/quizzes', search: '?mode=review' },
+    })
+  }
+
+  const nextLesson = lessons.find((lesson) => !state.progress.completedLessonIds.includes(lesson.id))
+  if (nextLesson) {
+    plan.push({
+      title: `Continue ${nextLesson.title}`,
+      reason: nextLesson.summary ?? nextLesson.explanation ?? 'Keep moving forward',
+      action: 'Open lessons',
+      lessonId: nextLesson.id,
+      route: { path: '/lessons', search: `?lesson=${encodeURIComponent(nextLesson.id)}` },
+    })
+  }
+
+  return plan.slice(0, 4)
 }
 
 export const calculateProgressSummary = (
@@ -110,14 +192,6 @@ export const calculateProgressSummary = (
     topicsNeedingReview,
     readinessLabel,
   }
-}
-
-export const isFlashcardDue = (dueAt: string | null) => {
-  if (!dueAt) {
-    return true
-  }
-
-  return new Date(dueAt).getTime() <= Date.now()
 }
 
 export const nextFlashcardReview = (attempts: number) => {
