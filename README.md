@@ -9,7 +9,6 @@ Ignition Core Exam Prep is a React and TypeScript web app for practicing Ignitio
 ## What this repository is
 
 This repository contains the Ignition Core Exam Prep application.
-Any previous coloring app content has been replaced.
 
 ## Features
 
